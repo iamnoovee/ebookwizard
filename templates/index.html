@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ebook Wizard ✦</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@300;400;600;700;900&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #1c1408; --cream: #fef9ee; --warm: #f7edcc;
+      --gold: #c49a2e; --gold2: #e8c96a; --gold3: #7a5c0f;
+      --sage: #5a7355; --border: rgba(196,154,46,.25);
+      --shadow: rgba(28,20,8,.12);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh; background: var(--cream);
+      font-family: 'Sarabun', sans-serif; font-weight: 300;
+      color: var(--ink); overflow-x: hidden;
+    }
+    body::after {
+      content: ''; position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999;
+    }
+    .orb { position: fixed; border-radius: 50%; filter: blur(90px); opacity: .14; pointer-events: none; }
+    .orb1 { width:600px;height:600px;background:var(--gold2);top:-150px;right:-150px; }
+    .orb2 { width:400px;height:400px;background:var(--sage);bottom:-100px;left:-100px; }
+    .page { max-width:700px; margin:0 auto; padding:60px 24px 100px; position:relative; z-index:1; }
+    header { text-align:center; margin-bottom:48px; }
+    .logo {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:72px; height:72px; border:2px solid var(--gold);
+      border-radius:50%; font-size:32px; margin-bottom:22px;
+      animation: breathe 4s ease-in-out infinite;
+      background:rgba(255,252,240,.7);
+    }
+    @keyframes breathe {
+      0%,100% { box-shadow:0 0 0 10px rgba(196,154,46,.07),0 0 0 20px rgba(196,154,46,.03); }
+      50%      { box-shadow:0 0 0 16px rgba(196,154,46,.1), 0 0 0 30px rgba(196,154,46,.04); }
+    }
+    h1 { font-family:'Noto Serif Thai',serif; font-size:clamp(30px,7vw,46px); font-weight:900; line-height:1.15; letter-spacing:-1px; }
+    h1 em { color:var(--gold); font-style:normal; }
+    .subtitle { margin-top:10px; color:var(--sage); font-size:15px; font-style:italic; }
+    .divider { text-align:center; color:var(--gold2); font-size:18px; letter-spacing:14px; margin:30px 0; opacity:.7; }
+    .card {
+      background:rgba(255,252,242,.88); border:1.5px solid var(--border);
+      border-radius:16px; padding:36px;
+      box-shadow:0 8px 40px var(--shadow),0 1px 0 rgba(255,255,255,.8) inset;
+      backdrop-filter:blur(12px);
+    }
+    .dropzone {
+      border:2px dashed var(--border); border-radius:12px; padding:48px 24px;
+      text-align:center; cursor:pointer; transition:all .25s;
+      background:rgba(254,249,238,.5); user-select:none;
+    }
+    .dropzone:hover,.dropzone.dragging { border-color:var(--gold); background:rgba(196,154,46,.05); }
+    .dropzone.has-file { border-style:solid; border-color:var(--sage); background:rgba(90,115,85,.05); }
+    .drop-icon { font-size:44px; margin-bottom:14px; display:block; }
+    .drop-title { font-family:'Noto Serif Thai',serif; font-size:18px; font-weight:600; margin-bottom:6px; }
+    .drop-sub { font-size:14px; color:#888; }
+    .drop-file { margin-top:14px; font-size:14px; color:var(--sage); font-weight:600; }
+    input[type=file] { display:none; }
+    .field { margin-top:22px; }
+    .field label { display:block; font-size:12px; font-weight:600; color:var(--gold3); letter-spacing:.8px; text-transform:uppercase; margin-bottom:8px; }
+    .field input[type=text] {
+      width:100%; padding:13px 16px;
+      font-family:'Sarabun',sans-serif; font-size:16px;
+      border:1.5px solid var(--border); border-radius:10px;
+      background:var(--cream); color:var(--ink);
+      transition:border-color .2s, box-shadow .2s;
+    }
+    .field input[type=text]:focus { outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(196,154,46,.1); }
+    .formats { display:flex; gap:10px; margin-top:22px; }
+    .fmt-chip {
+      flex:1; padding:12px; border:1.5px solid var(--border);
+      border-radius:10px; background:var(--cream);
+      text-align:center; cursor:pointer; transition:all .2s;
+      font-size:13px; color:#666; font-family:'Sarabun',sans-serif;
+    }
+    .fmt-chip.active { border-color:var(--gold); background:rgba(196,154,46,.08); color:var(--gold3); font-weight:600; }
+    .fmt-icon { font-size:22px; display:block; margin-bottom:4px; }
+    .btn {
+      width:100%; margin-top:24px; padding:17px;
+      background:linear-gradient(135deg,#c49a2e,#8a640d);
+      color:white; font-family:'Noto Serif Thai',serif;
+      font-size:18px; font-weight:700; border:none; border-radius:12px;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
+      transition:opacity .2s,transform .15s,box-shadow .2s;
+      box-shadow:0 6px 24px rgba(196,154,46,.38);
+    }
+    .btn:hover:not(:disabled) { opacity:.9; transform:translateY(-2px); box-shadow:0 10px 32px rgba(196,154,46,.45); }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    .btn.green { background:linear-gradient(135deg,#5a7355,#3a5230); box-shadow:0 6px 24px rgba(90,115,85,.35); }
+    .spinner { width:20px;height:20px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; display:none; }
+    .spinner.show { display:block; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    #progressPanel { margin-top:28px; border:1.5px solid var(--border); border-radius:12px; overflow:hidden; display:none; }
+    .progress-header { padding:16px 20px; background:var(--warm); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+    .ph-title { font-family:'Noto Serif Thai',serif; font-weight:600; font-size:16px; flex:1; }
+    .steps-list { padding:8px 0; }
+    .step-row { display:flex; align-items:center; gap:14px; padding:12px 20px; border-bottom:1px solid rgba(196,154,46,.08); font-size:14px; transition:background .3s; }
+    .step-row:last-child { border-bottom:none; }
+    .step-row.done   { background:rgba(90,115,85,.04); }
+    .step-row.active { background:rgba(196,154,46,.04); }
+    .step-bullet { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:#eee;color:#aaa;transition:all .4s; }
+    .step-bullet.done   { background:var(--sage); color:white; }
+    .step-bullet.active { background:var(--gold); color:white; animation:pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(196,154,46,.4);}50%{box-shadow:0 0 0 7px rgba(196,154,46,0);} }
+    .step-label { flex:1; }
+    .step-label.done { color:var(--sage); }
+    .step-label.active { color:var(--gold3); font-weight:600; }
+    .step-label.pending { color:#bbb; }
+    .step-time { font-size:12px; color:#aaa; }
+
+    #resultPanel { display:none; margin-top:28px; animation:fadeUp .5s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
+    .result-header { display:flex;align-items:center;gap:12px;padding:20px 24px;background:rgba(90,115,85,.08);border:1.5px solid rgba(90,115,85,.25);border-radius:12px 12px 0 0; }
+    .result-header h3 { font-family:'Noto Serif Thai',serif; font-size:18px; font-weight:700; color:var(--sage); }
+    .book-preview { border:1.5px solid rgba(90,115,85,.2); border-top:none; border-radius:0 0 12px 12px; padding:24px; background:rgba(255,252,242,.7); }
+    .book-meta { display:flex; gap:16px; align-items:flex-start; margin-bottom:20px; }
+    .book-cover { width:80px;height:110px;flex-shrink:0;background:linear-gradient(160deg,var(--gold),var(--gold3));border-radius:4px 8px 8px 4px;display:flex;align-items:center;justify-content:center;padding:12px;box-shadow:4px 4px 16px rgba(196,154,46,.35),-1px 0 0 rgba(0,0,0,.15);position:relative;overflow:hidden; }
+    .book-cover::before { content:'';position:absolute;left:0;top:0;bottom:0;width:8px;background:rgba(0,0,0,.2); }
+    .book-cover-title { font-family:'Noto Serif Thai',serif;font-size:9px;font-weight:700;color:white;text-align:center;line-height:1.4;z-index:1;word-break:break-word; }
+    .book-title-display { font-family:'Noto Serif Thai',serif; font-size:20px; font-weight:700; margin-bottom:8px; }
+    .book-stats { display:flex; gap:14px; flex-wrap:wrap; }
+    .stat { font-size:13px; color:#888; }
+    .stat strong { color:var(--ink); font-weight:600; }
+
+    .dl-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
+    .dl-btn { display:flex;align-items:center;gap:12px;padding:16px 18px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;background:var(--cream);color:var(--ink);text-decoration:none;font-family:'Sarabun',sans-serif; }
+    .dl-btn:hover { border-color:var(--gold); background:rgba(196,154,46,.06); transform:translateY(-2px); box-shadow:0 6px 20px var(--shadow); }
+    .dl-icon { font-size:28px; flex-shrink:0; }
+    .dl-label { font-family:'Noto Serif Thai',serif; font-weight:700; font-size:15px; color:var(--gold3); }
+    .dl-sub { font-size:11px; color:#999; margin-top:2px; }
+
+    #errorBox { display:none; margin-top:20px; padding:16px 20px; background:rgba(158,58,31,.08); border:1px solid rgba(158,58,31,.25); border-radius:10px; color:#7a2a10; font-size:14px; }
+
+    .how { margin-top:52px; }
+    .how h2 { font-family:'Noto Serif Thai',serif; font-size:22px; font-weight:700; text-align:center; margin-bottom:24px; }
+    .how-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    .how-card { padding:20px 16px; border:1px solid var(--border); border-radius:12px; background:rgba(255,252,242,.7); text-align:center; }
+    .how-num { display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:var(--gold);color:white;font-family:'Noto Serif Thai',serif;font-weight:900;font-size:16px;margin-bottom:12px;box-shadow:0 3px 10px rgba(196,154,46,.35); }
+    .how-text { font-size:13px; line-height:1.6; color:#555; }
+    footer { text-align:center; margin-top:56px; font-size:12px; color:#bbb; line-height:1.9; }
+    @media(max-width:500px){.card{padding:24px 18px;}.page{padding:36px 16px 60px;}.dl-row{grid-template-columns:1fr;}.how-grid{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="page">
+  <header>
+    <div class="logo">📚</div>
+    <h1>Ebook <em>Wizard</em></h1>
+    <p class="subtitle">แปลง Word เป็น eBook คุณภาพสูง · PDF + EPUB · มีสารบัญ</p>
+  </header>
+  <div class="divider">✦ ✦ ✦</div>
+
+  <div class="card" id="uploadCard">
+    <div class="dropzone" id="dropzone"
+      onclick="document.getElementById('fileInput').click()"
+      ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <input type="file" id="fileInput" accept=".docx" onchange="onFileSelect(this)">
+      <span class="drop-icon" id="dropIcon">📂</span>
+      <div class="drop-title" id="dropTitle">วางไฟล์ .docx ที่นี่</div>
+      <div class="drop-sub" id="dropSub">หรือคลิกเพื่อเลือกไฟล์ · สูงสุด 50 MB</div>
+      <div class="drop-file" id="dropFile" style="display:none"></div>
+    </div>
+    <div class="field">
+      <label>ชื่อหนังสือ</label>
+      <input type="text" id="titleInput" placeholder="เช่น ธรรมชาตา — ปัญญาจากธรรมชาติ" />
+    </div>
+    <div class="field">
+      <label>รูปแบบที่ต้องการ</label>
+      <div class="formats">
+        <div class="fmt-chip active" id="chipPdf" onclick="toggleFmt('pdf')"><span class="fmt-icon">📄</span>PDF</div>
+        <div class="fmt-chip active" id="chipEpub" onclick="toggleFmt('epub')"><span class="fmt-icon">📱</span>EPUB</div>
+      </div>
+    </div>
+    <button class="btn" id="convertBtn" onclick="startConvert()" disabled>
+      <div class="spinner" id="btnSpinner"></div>
+      <span id="btnText">✨ แปลงเป็น Ebook</span>
+    </button>
+  </div>
+
+  <div id="errorBox"></div>
+
+  <div id="progressPanel">
+    <div class="progress-header">
+      <span style="font-size:22px">🔄</span>
+      <span class="ph-title">ขั้นตอนการแปลง</span>
+      <div class="spinner show"></div>
+    </div>
+    <div class="steps-list" id="stepsList"></div>
+  </div>
+
+  <div id="resultPanel">
+    <div class="result-header"><span style="font-size:24px">🎉</span><h3>แปลงสำเร็จ!</h3></div>
+    <div class="book-preview">
+      <div class="book-meta">
+        <div class="book-cover"><div class="book-cover-title" id="coverTitle">Ebook</div></div>
+        <div>
+          <div class="book-title-display" id="resultTitle">-</div>
+          <div class="book-stats" id="bookStats"></div>
+        </div>
+      </div>
+      <div class="dl-row" id="dlRow"></div>
+      <button class="btn green" style="margin-top:16px" onclick="resetApp()">➕ แปลงไฟล์ใหม่</button>
+    </div>
+  </div>
+
+  <div class="how">
+    <h2>✦ วิธีใช้งาน</h2>
+    <div class="how-grid">
+      <div class="how-card"><div class="how-num">1</div><div class="how-text">อัปโหลดไฟล์ .docx จาก Microsoft Word</div></div>
+      <div class="how-card"><div class="how-num">2</div><div class="how-text">รอ 30–90 วินาที ระบบแปลงอัตโนมัติ</div></div>
+      <div class="how-card"><div class="how-num">3</div><div class="how-text">ดาวน์โหลด PDF + EPUB พร้อมสารบัญ</div></div>
+    </div>
+  </div>
+  <footer>
+    <p>ไฟล์จะถูกลบอัตโนมัติหลัง 60 นาที · ปลอดภัย · ไม่เก็บข้อมูล</p>
+    <p>Powered by <strong>LibreOffice</strong> + <strong>Pandoc</strong></p>
+  </footer>
+</div>
+
+<script>
+  let selectedFile=null, fmtPdf=true, fmtEpub=true, pollTimer=null;
+  const STEPS=[
+    {label:"อ่านไฟล์ .docx",time:"~1s"},
+    {label:"วิเคราะห์โครงสร้าง",time:"~2s"},
+    {label:"สร้าง PDF (LibreOffice)",time:"~30s"},
+    {label:"สร้าง EPUB (Pandoc)",time:"~15s"},
+    {label:"สร้างสารบัญ",time:"~3s"},
+    {label:"แพ็คไฟล์พร้อมดาวน์โหลด",time:"~1s"},
+  ];
+
+  function onFileSelect(input){const f=input.files[0];if(!f)return;if(!f.name.endsWith('.docx')){alert('กรุณาเลือกไฟล์ .docx เท่านั้น');return;}setFile(f);}
+  function onDragOver(e){e.preventDefault();document.getElementById('dropzone').classList.add('dragging');}
+  function onDragLeave(){document.getElementById('dropzone').classList.remove('dragging');}
+  function onDrop(e){e.preventDefault();document.getElementById('dropzone').classList.remove('dragging');const f=e.dataTransfer.files[0];if(!f||!f.name.endsWith('.docx')){alert('กรุณาเลือกไฟล์ .docx เท่านั้น');return;}setFile(f);}
+
+  function setFile(f){
+    selectedFile=f;
+    document.getElementById('dropzone').classList.add('has-file');
+    document.getElementById('dropIcon').textContent='✅';
+    document.getElementById('dropTitle').textContent='ไฟล์พร้อมแล้ว';
+    document.getElementById('dropSub').textContent='คลิกเพื่อเปลี่ยนไฟล์';
+    const df=document.getElementById('dropFile'); df.style.display='block'; df.textContent='📄 '+f.name;
+    const ti=document.getElementById('titleInput'); if(!ti.value) ti.value=f.name.replace('.docx','').replace(/_/g,' ');
+    document.getElementById('convertBtn').disabled=false;
+  }
+
+  function toggleFmt(fmt){
+    if(fmt==='pdf'){fmtPdf=!fmtPdf;document.getElementById('chipPdf').classList.toggle('active',fmtPdf);}
+    else{fmtEpub=!fmtEpub;document.getElementById('chipEpub').classList.toggle('active',fmtEpub);}
+  }
+
+  async function startConvert(){
+    if(!selectedFile) return;
+    document.getElementById('convertBtn').disabled=true;
+    document.getElementById('btnSpinner').classList.add('show');
+    document.getElementById('btnText').textContent='กำลังอัปโหลด…';
+    document.getElementById('errorBox').style.display='none';
+    buildSteps(-1);
+    document.getElementById('progressPanel').style.display='block';
+
+    const form=new FormData();
+    form.append('file',selectedFile);
+    form.append('title',document.getElementById('titleInput').value.trim()||selectedFile.name.replace('.docx',''));
+
+    try{
+      const res=await fetch('/convert',{method:'POST',body:form});
+      const data=await res.json();
+      if(data.error){showError(data.error);return;}
+      document.getElementById('btnText').textContent='กำลังแปลงไฟล์…';
+      animateSteps(0, data.job_id);
+    }catch(e){showError('อัปโหลดล้มเหลว: '+e.message);}
+  }
+
+  let stepAnim=0;
+  function animateSteps(idx, jobId){
+    buildSteps(idx);
+    const delays=[800,1200,2000,1800,900,600];
+    if(idx < STEPS.length-1){
+      setTimeout(()=>animateSteps(idx+1, jobId), delays[idx]||1000);
+    } else {
+      buildSteps(STEPS.length);
+      pollStatus(jobId);
+    }
+  }
+
+  function buildSteps(activeIdx){
+    document.getElementById('stepsList').innerHTML=STEPS.map((s,i)=>{
+      const st=i<activeIdx?'done':i===activeIdx?'active':'pending';
+      return `<div class="step-row ${st}"><div class="step-bullet ${st}">${st==='done'?'✓':i+1}</div><div class="step-label ${st}">${s.label}</div><div class="step-time">${st==='done'?'✓':s.time}</div></div>`;
+    }).join('');
+  }
+
+  function pollStatus(jobId){
+    clearTimeout(pollTimer);
+    pollTimer=setTimeout(async()=>{
+      try{
+        const res=await fetch('/status/'+jobId);
+        const data=await res.json();
+        if(data.status==='done'){showResult(data);}
+        else if(data.status==='error'){showError(data.error);}
+        else{pollStatus(jobId);}
+      }catch(e){showError('ไม่ได้รับการตอบกลับ: '+e.message);}
+    },2000);
+  }
+
+  function showResult(data){
+    document.getElementById('progressPanel').style.display='none';
+    const title=document.getElementById('titleInput').value.trim()||'Ebook ของคุณ';
+    document.getElementById('coverTitle').textContent=title;
+    document.getElementById('resultTitle').textContent=title;
+    let stats='';
+    if(data.downloads.pdf)  stats+='<div class="stat">📄 <strong>PDF</strong></div>';
+    if(data.downloads.epub) stats+='<div class="stat">📱 <strong>EPUB</strong></div>';
+    document.getElementById('bookStats').innerHTML=stats;
+    let dl='';
+    if(data.downloads.pdf)  dl+=`<a class="dl-btn" href="${data.downloads.pdf}" download><span class="dl-icon">📄</span><span><div class="dl-label">ดาวน์โหลด PDF</div><div class="dl-sub">พร้อมพิมพ์ · รองรับทุก Device</div></span></a>`;
+    if(data.downloads.epub) dl+=`<a class="dl-btn" href="${data.downloads.epub}" download><span class="dl-icon">📱</span><span><div class="dl-label">ดาวน์โหลด EPUB</div><div class="dl-sub">Kindle · iPad · Kobo</div></span></a>`;
+    document.getElementById('dlRow').innerHTML=dl;
+    document.getElementById('resultPanel').style.display='block';
+    document.getElementById('resultPanel').scrollIntoView({behavior:'smooth'});
+    resetBtn();
+  }
+
+  function showError(msg){
+    document.getElementById('progressPanel').style.display='none';
+    const eb=document.getElementById('errorBox');
+    eb.style.display='block'; eb.textContent='⚠️ '+msg;
+    resetBtn();
+  }
+
+  function resetBtn(){
+    document.getElementById('convertBtn').disabled=false;
+    document.getElementById('btnSpinner').classList.remove('show');
+    document.getElementById('btnText').textContent='✨ แปลงเป็น Ebook';
+  }
+
+  function resetApp(){
+    selectedFile=null; fmtPdf=true; fmtEpub=true;
+    document.getElementById('titleInput').value='';
+    document.getElementById('fileInput').value='';
+    document.getElementById('dropzone').className='dropzone';
+    document.getElementById('dropIcon').textContent='📂';
+    document.getElementById('dropTitle').textContent='วางไฟล์ .docx ที่นี่';
+    document.getElementById('dropSub').textContent='หรือคลิกเพื่อเลือกไฟล์ · สูงสุด 50 MB';
+    document.getElementById('dropFile').style.display='none';
+    document.getElementById('chipPdf').classList.add('active');
+    document.getElementById('chipEpub').classList.add('active');
+    document.getElementById('convertBtn').disabled=true;
+    document.getElementById('progressPanel').style.display='none';
+    document.getElementById('resultPanel').style.display='none';
+    document.getElementById('errorBox').style.display='none';
+    resetBtn();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+</script>
+</body>
+</html>
