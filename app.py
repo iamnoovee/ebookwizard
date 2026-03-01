@@ -7,6 +7,7 @@ app = Flask(__name__)
 BASE_DIR   = Path(__file__).parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 OUTPUT_DIR = BASE_DIR / "outputs"
+FONT_DIR   = BASE_DIR / "fonts"
 
 UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
@@ -28,20 +29,64 @@ def cleanup():
 threading.Thread(target=cleanup, daemon=True).start()
 
 
+def find_thai_font():
+    """หาฟอนต์ภาษาไทยที่มีอยู่ในระบบ"""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    # 1. ลองใช้ฟอนต์ที่ดาวน์โหลดไว้ใน fonts/
+    candidates_dir = [
+        (FONT_DIR / "Sarabun-Regular.ttf", FONT_DIR / "Sarabun-Bold.ttf", FONT_DIR / "Sarabun-Italic.ttf"),
+    ]
+    # 2. ลองหาใน system fonts
+    system_candidates = [
+        ("/usr/share/fonts/truetype/tlwg/Sarabun.ttf",
+         "/usr/share/fonts/truetype/tlwg/Sarabun-Bold.ttf",
+         "/usr/share/fonts/truetype/tlwg/Sarabun-Oblique.ttf"),
+        ("/usr/share/fonts/truetype/tlwg/Garuda.ttf",
+         "/usr/share/fonts/truetype/tlwg/Garuda-Bold.ttf",
+         "/usr/share/fonts/truetype/tlwg/Garuda-Oblique.ttf"),
+        ("/usr/share/fonts/truetype/tlwg/Norasi.ttf",
+         "/usr/share/fonts/truetype/tlwg/Norasi-Bold.ttf",
+         "/usr/share/fonts/truetype/tlwg/Norasi-Oblique.ttf"),
+    ]
+
+    all_candidates = [(Path(r), Path(b), Path(i)) for r, b, i in system_candidates]
+    all_candidates = list(candidates_dir) + all_candidates
+
+    for regular, bold, italic in all_candidates:
+        if regular.exists():
+            try:
+                pdfmetrics.registerFont(TTFont("ThaiFont", str(regular)))
+                b_path = bold if bold.exists() else regular
+                i_path = italic if italic.exists() else regular
+                pdfmetrics.registerFont(TTFont("ThaiFont-Bold",   str(b_path)))
+                pdfmetrics.registerFont(TTFont("ThaiFont-Italic", str(i_path)))
+                from reportlab.pdfbase.pdfmetrics import registerFontFamily
+                registerFontFamily("ThaiFont",
+                    normal="ThaiFont", bold="ThaiFont-Bold",
+                    italic="ThaiFont-Italic", boldItalic="ThaiFont-Bold")
+                print(f"[font] Using: {regular}")
+                return "ThaiFont", "ThaiFont-Bold"
+            except Exception as e:
+                print(f"[font] Failed {regular}: {e}")
+                continue
+
+    print("[font] No Thai font found, using Helvetica (Thai may not render)")
+    return "Helvetica", "Helvetica-Bold"
+
+
 def build_pdf(docx_path, pdf_path, title, page_size="A4"):
     from docx import Document
     from reportlab.lib.pagesizes import A4, A5
     from reportlab.lib.units import mm
     from reportlab.lib import colors
     from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
     from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer,
-        PageBreak, HRFlowable
+        SimpleDocTemplate, Paragraph, Spacer, PageBreak, HRFlowable
     )
     from reportlab.platypus.tableofcontents import TableOfContents
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
 
     psize  = A4 if page_size == "A4" else A5
     pw, ph = psize
@@ -51,19 +96,7 @@ def build_pdf(docx_path, pdf_path, title, page_size="A4"):
     else:
         mg = 18*mm; bs = 10; h1s = 18; h2s = 14; h3s = 12
 
-    # Thai font
-    font_dir = Path(__file__).parent / "fonts"
-    tf = "Helvetica"; tb = "Helvetica-Bold"
-    if (font_dir/"Sarabun-Regular.ttf").exists():
-        try:
-            pdfmetrics.registerFont(TTFont("Sarabun",      str(font_dir/"Sarabun-Regular.ttf")))
-            pdfmetrics.registerFont(TTFont("Sarabun-Bold", str(font_dir/"Sarabun-Bold.ttf")))
-            pdfmetrics.registerFont(TTFont("Sarabun-Italic",str(font_dir/"Sarabun-Italic.ttf")))
-            from reportlab.pdfbase.pdfmetrics import registerFontFamily
-            registerFontFamily("Sarabun",normal="Sarabun",bold="Sarabun-Bold",
-                               italic="Sarabun-Italic",boldItalic="Sarabun-Bold")
-            tf = "Sarabun"; tb = "Sarabun-Bold"
-        except: pass
+    tf, tb = find_thai_font()
 
     ink  = colors.HexColor("#1c1408")
     gold = colors.HexColor("#c49a2e")
@@ -72,27 +105,27 @@ def build_pdf(docx_path, pdf_path, title, page_size="A4"):
     muted= colors.HexColor("#888888")
     rule = colors.HexColor("#e8d5a0")
 
-    def S(name,**k): return ParagraphStyle(name,**k)
+    def S(name, **k): return ParagraphStyle(name, **k)
 
     sty = {
-        "cover": S("cover", fontName=tb, fontSize=h1s+6, textColor=ink,
-                    alignment=TA_CENTER, spaceAfter=6*mm, leading=(h1s+6)*1.4),
-        "cover_sub": S("csub", fontName=tf, fontSize=bs, textColor=muted,
+        "cover":     S("cover", fontName=tb, fontSize=h1s+6, textColor=ink,
+                        alignment=TA_CENTER, spaceAfter=6*mm, leading=(h1s+6)*1.4),
+        "cover_sub": S("csub",  fontName=tf, fontSize=bs,    textColor=muted,
                         alignment=TA_CENTER, spaceAfter=4*mm),
-        "toc_title": S("toctit", fontName=tb, fontSize=h1s, textColor=ink,
-                        spaceBefore=0, spaceAfter=5*mm, leading=h1s*1.4),
+        "toc_title": S("toctit",fontName=tb, fontSize=h1s,   textColor=ink,
+                        spaceAfter=5*mm, leading=h1s*1.4),
         "h1": S("H1", fontName=tb, fontSize=h1s, textColor=ink,
                  spaceBefore=10*mm, spaceAfter=3*mm, leading=h1s*1.4, keepWithNext=1),
         "h2": S("H2", fontName=tb, fontSize=h2s, textColor=gd,
-                 spaceBefore=7*mm, spaceAfter=2*mm, leading=h2s*1.4, keepWithNext=1),
+                 spaceBefore=7*mm,  spaceAfter=2*mm, leading=h2s*1.4, keepWithNext=1),
         "h3": S("H3", fontName=tb, fontSize=h3s, textColor=sage,
-                 spaceBefore=5*mm, spaceAfter=2*mm, leading=h3s*1.4, keepWithNext=1),
+                 spaceBefore=5*mm,  spaceAfter=2*mm, leading=h3s*1.4, keepWithNext=1),
         "body": S("body", fontName=tf, fontSize=bs, textColor=ink,
                    spaceAfter=3*mm, leading=bs*1.75, alignment=TA_JUSTIFY),
         "toc1": S("toc1", fontName=tb, fontSize=bs+1, textColor=ink,
                    leading=(bs+1)*1.6, leftIndent=0, spaceAfter=2*mm),
-        "toc2": S("toc2", fontName=tf, fontSize=bs, textColor=gd,
-                   leading=bs*1.5, leftIndent=6*mm, spaceAfter=1.2*mm),
+        "toc2": S("toc2", fontName=tf, fontSize=bs,   textColor=gd,
+                   leading=bs*1.5,    leftIndent=6*mm, spaceAfter=1.2*mm),
         "toc3": S("toc3", fontName=tf, fontSize=bs-1, textColor=sage,
                    leading=(bs-1)*1.5, leftIndent=12*mm, spaceAfter=1*mm),
     }
@@ -103,7 +136,7 @@ def build_pdf(docx_path, pdf_path, title, page_size="A4"):
         canvas.line(mg, 15*mm, pw-mg, 15*mm)
         canvas.setFont(tf, 8); canvas.setFillColor(muted)
         if doc.page > 1:
-            canvas.drawCentredString(pw/2, 10*mm, str(doc.page-1))
+            canvas.drawCentredString(pw/2, 10*mm, str(doc.page - 1))
         if doc.page > 2:
             canvas.setFont(tf, 7); canvas.setFillColor(gold)
             canvas.drawString(mg, ph-12*mm, title)
@@ -124,10 +157,9 @@ def build_pdf(docx_path, pdf_path, title, page_size="A4"):
     story.append(HRFlowable(width="80%", thickness=2, color=gold, spaceAfter=8*mm, hAlign="CENTER"))
     story.append(Paragraph(title, sty["cover"]))
     story.append(HRFlowable(width="60%", thickness=1, color=gold, spaceBefore=4*mm, spaceAfter=8*mm, hAlign="CENTER"))
-    story.append(Paragraph("✦", sty["cover_sub"]))
     story.append(PageBreak())
 
-    # TOC page
+    # TOC
     story.append(Paragraph("สารบัญ", sty["toc_title"]))
     story.append(HRFlowable(width="100%", thickness=1.5, color=rule, spaceAfter=4*mm))
     story.append(toc)
@@ -137,18 +169,16 @@ def build_pdf(docx_path, pdf_path, title, page_size="A4"):
     doc_word = Document(str(docx_path))
 
     def safe(t):
-        return (t or "").strip().replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+        return (t or "").strip() \
+            .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     heading_map = {
-        "Heading 1": ("h1", 1),
-        "Heading 2": ("h2", 2),
-        "Heading 3": ("h3", 3),
-        "Title":     ("h1", 1),
-        "Subtitle":  ("h2", 2),
+        "Heading 1": ("h1", 1), "Heading 2": ("h2", 2), "Heading 3": ("h3", 3),
+        "Title": ("h1", 1), "Subtitle": ("h2", 2),
     }
 
     for para in doc_word.paragraphs:
-        text = safe(para.text)
+        text  = safe(para.text)
         sname = para.style.name if para.style else "Normal"
 
         if not text:
@@ -158,15 +188,14 @@ def build_pdf(docx_path, pdf_path, title, page_size="A4"):
         if sname in heading_map:
             key, level = heading_map[sname]
             anchor = f"sec_{uuid.uuid4().hex[:8]}"
-            p = Paragraph(f'<a name="{anchor}"/>{text}', sty[key])
-            story.append(p)
+            story.append(Paragraph(f'<a name="{anchor}"/>{text}', sty[key]))
             if level == 1:
                 story.append(HRFlowable(width="100%", thickness=1, color=rule, spaceAfter=2*mm))
             toc.notify("TOCEntry", (level-1, text, 0, anchor))
         else:
             story.append(Paragraph(text, sty["body"]))
 
-    pdfdoc.multiBuild(story, onFirstPage=lambda c,d: None, onLaterPages=on_page)
+    pdfdoc.multiBuild(story, onFirstPage=lambda c, d: None, onLaterPages=on_page)
 
 
 def build_epub(docx_path, epub_path, title):
@@ -185,7 +214,7 @@ def do_convert(job_id, docx_path, title, page_size, make_epub):
     job = jobs[job_id]
     job["status"] = "converting"
 
-    stem     = docx_path.stem
+    stem      = docx_path.stem
     pdf_path  = OUTPUT_DIR / f"{stem}.pdf"
     epub_path = OUTPUT_DIR / f"{stem}.epub"
     errors, downloads = [], {}
@@ -228,7 +257,8 @@ def convert():
     docx_path = UPLOAD_DIR / f"{job_id}.docx"
     f.save(docx_path)
     jobs[job_id] = {"status":"queued","ts":time.time()}
-    threading.Thread(target=do_convert, args=(job_id,docx_path,title,page_size,make_epub), daemon=True).start()
+    threading.Thread(target=do_convert,
+        args=(job_id, docx_path, title, page_size, make_epub), daemon=True).start()
     return jsonify(job_id=job_id)
 
 @app.route("/status/<job_id>")
